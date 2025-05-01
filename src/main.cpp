@@ -1,3 +1,4 @@
+#include "Arduino.h"
 #include "DaisyDuino.h"
 #include "SaturationProcessor.h"
 #include "ReverbProcessor.h"
