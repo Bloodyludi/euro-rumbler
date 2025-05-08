@@ -11,6 +11,8 @@ float sample_rate;
 
 static float wetMix = 1;
 static float pot1, pot2, pot3, pot4, cv1, cv2;
+size_t selectedSetting = 0;
+float selectedValue = 0.f;
 
 ReverbProcessor *reverb;
 SaturationProcessor *saturation;
@@ -41,7 +43,7 @@ void callback(float **in, float **out, size_t size) {
         wetL = revL * .8f + delL * .6f;
         wetR = revR * .8f + delR * .6f;
 
-        // // Lowpass wet signal at 1kHz
+        // Lowpass wet signal at 1kHz
         filter->SetFreq(4000.f);
         filter->Process(wetL);
         wetL = filter->Low();
@@ -90,6 +92,30 @@ void setup() {
     DAISY.begin(callback);
 }
 
+typedef void (*UpdateFunction)(float);
+UpdateFunction updateFunctions[] = {
+    [](float val) -> void { saturation->updateParameters(val, 0); },
+    [](float val) -> void { reverb->updateParameters(1.0f, val, 20000); },
+    [](float val) -> void { clockedDelay->updateFeedback(val, 0); },
+};
+
+const size_t numSettings = std::size(updateFunctions);
+
+void updateSelectedSetting(float value) {
+    if (value - selectedValue < 0.01f) {
+        return; // Only update if the value knob was changed
+    }
+
+    selectedValue = value;
+    selectedSetting = static_cast<size_t>(pot2 * numSettings);
+    if (selectedSetting >= numSettings) {
+        selectedSetting = numSettings - 1; // Ensure index is within bounds
+    }
+
+    // Call the selected function with the value of pot4
+    updateFunctions[selectedSetting](selectedValue);
+}
+
 void loop() {
     pot1 = CtrlVal(A0);
     pot2 = CtrlVal(A1);
@@ -98,9 +124,17 @@ void loop() {
     cv1 = 1 - CtrlVal(A4);
     cv2 = 1 - CtrlVal(A5);
 
+    // Update dry/wet mix based on pot1
     wetMix = pot1;
 
-    reverb->updateParameters(1.0f, pot2, 20000);
-    clockedDelay->updateParameters(pot4, pot3, cv1, 0);
-    saturation->updateParameters(pot1, .0f);
+    updateSelectedSetting(pot4);
+
+    // Update clockedDelay parameters
+    clockedDelay->updateClockDivisor(pot3);
+    clockedDelay->updateClock(cv1);
+
+    // reverb->updateParameters(1.0f, pot2, 20000);
+    // clockedDelay->updateParameters(pot4, pot3, cv1, 0);
+    // saturation->updateParameters(pot1, .0f);
 }
+
