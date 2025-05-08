@@ -1,7 +1,8 @@
 #ifndef SIDECHAINCOMPRESSOR_H
 #define SIDECHAINCOMPRESSOR_H
 
-#include "DaisyDuino.h"
+#include "daisysp.h"
+using namespace daisysp;
 
 class SidechainCompressor {
 

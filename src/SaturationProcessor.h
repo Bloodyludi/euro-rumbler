@@ -1,7 +1,8 @@
 #ifndef SATURATIONPROCESSOR_H
 #define SATURATIONPROCESSOR_H
 
-#include "DaisyDuino.h"
+#include "daisysp.h"
+using namespace daisysp;
 
 class SaturationProcessor {
     Overdrive driveProcessorL;

@@ -1,6 +1,9 @@
 #include "SidechainCompressor.h"
 
-DSY_SDRAM_BSS daisysp::Compressor ScComp;
+#include <DaisySP-LGPL/Source/Dynamics/compressor.h>
+#include <dev/sdram.h>
+
+DSY_SDRAM_BSS Compressor ScComp;
 
 SidechainCompressor::SidechainCompressor() {}
 

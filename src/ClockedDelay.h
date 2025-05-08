@@ -1,7 +1,8 @@
 #ifndef CLOCKED_DELAY_H
 #define CLOCKED_DELAY_H
 
-#include "DaisyDuino.h"
+#include "daisysp.h"
+using namespace daisysp;
 
 class ClockedDelay {
     float dryL = 0, dryR = 0, delayOutL = 0, delayOutR = 0, targetDelayTimeL = 0, targetDelayTimeR = 0;

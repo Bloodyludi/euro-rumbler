@@ -1,7 +1,8 @@
 #ifndef REVERB_PROCESSOR_H
 #define REVERB_PROCESSOR_H
 
-#include "DaisyDuino.h"
+#include "daisysp.h"
+using namespace daisysp;
 
 class ReverbProcessor {
 private:

@@ -14,7 +14,7 @@ void SaturationProcessor::process(const float &inL, const float &inR, float *out
 }
 
 void SaturationProcessor::updateParameters(float drive, float driveCV) {
-    drive = 0.3f + constrain(drive + driveCV, 0.f, 1.f) * 0.2f;
+    drive = 0.3f + std::clamp(drive + driveCV, 0.f, 1.f) * 0.2f;
     driveProcessorL.SetDrive(drive);
     driveProcessorR.SetDrive(drive);
 }

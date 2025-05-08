@@ -1,11 +1,16 @@
-#include "Arduino.h"
-#include "DaisyDuino.h"
 #include "SaturationProcessor.h"
 #include "ReverbProcessor.h"
 #include "ClockedDelay.h"
 #include "SidechainCompressor.h"
+#include "daisy_seed.h"
+#include "../../lib/loewy.h"
+#include "daisysp.h"
 
-DaisyHardware hw;
+using namespace daisysp;
+using namespace loewy;
+using namespace daisy;
+
+DaisySeed hw;
 size_t num_channels;
 float sample_rate;
 
@@ -21,12 +26,7 @@ SidechainCompressor *sidechain;
 Svf *filter;
 Limiter *limiter;
 
-float CtrlVal(uint8_t pin) {
-    analogReadResolution(16);
-    return constrain(analogRead(pin) / 65535.f, 0.f, 1.f);
-}
-
-void callback(float **in, float **out, size_t size) {
+void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, size_t size) {
     float dryL = 0, dryR = 0, dryMono = 0, revL = 0, revR = 0, delL = 0, delR = 0, wetL = 0, wetR = 0;
     float lBuffer[2];
 
@@ -66,32 +66,6 @@ void callback(float **in, float **out, size_t size) {
 
 }
 
-void setup() {
-    hw = DAISY.init(DAISY_SEED, AUDIO_SR_48K);
-    num_channels = hw.num_channels;
-    sample_rate = DAISY.get_samplerate();
-
-    saturation = new SaturationProcessor();
-    saturation->initialize(sample_rate);
-
-    reverb = new ReverbProcessor();
-    reverb->initialize(sample_rate);
-
-    clockedDelay = new ClockedDelay();
-    clockedDelay->initialize(sample_rate);
-
-    filter = new Svf();
-    filter->Init(sample_rate);
-
-    sidechain = new SidechainCompressor();
-    sidechain->initialize(sample_rate);
-
-    limiter = new Limiter();
-    limiter->Init();
-
-    DAISY.begin(callback);
-}
-
 typedef void (*UpdateFunction)(float);
 UpdateFunction updateFunctions[] = {
     [](float val) -> void { saturation->updateParameters(val, 0); },
@@ -116,13 +90,27 @@ void updateSelectedSetting(float value) {
     updateFunctions[selectedSetting](selectedValue);
 }
 
+////Setting Struct containing parameters we want to save to flash
+// struct Settings {
+//     //Overloading the != operator
+//     //This is necessary as this operator is used in the PersistentStorage source code
+//     bool operator!=(const Settings& a) const {
+//         return true;
+//     }
+// };
+
+
+// //Persistent Storage Declaration. Using type Settings and passed the devices qspi handle
+// PersistentStorage<Settings> SavedSettings(hw.seed.qspi);
+
 void loop() {
-    pot1 = CtrlVal(A0);
-    pot2 = CtrlVal(A1);
-    pot3 = CtrlVal(A2);
-    pot4 = CtrlVal(A3);
-    cv1 = 1 - CtrlVal(A4);
-    cv2 = 1 - CtrlVal(A5);
+    cv1 = 1 - hw.adc.GetFloat(Loewy::CV::CV_1);
+    cv2 = 1 - hw.adc.GetFloat(Loewy::CV::CV_2);
+
+    pot1 = hw.adc.GetFloat(Loewy::Pot::POT_1);
+    pot2 = hw.adc.GetFloat(Loewy::Pot::POT_2);
+    pot3 = hw.adc.GetFloat(Loewy::Pot::POT_3);
+    pot4 = hw.adc.GetFloat(Loewy::Pot::POT_4);
 
     // Update dry/wet mix based on pot1
     wetMix = pot1;
@@ -138,3 +126,43 @@ void loop() {
     // saturation->updateParameters(pot1, .0f);
 }
 
+int main(void) {
+    hw.Init();
+    hw.SetAudioBlockSize(4);
+    sample_rate = hw.AudioSampleRate();
+
+    saturation = new SaturationProcessor();
+    saturation->initialize(sample_rate);
+
+    reverb = new ReverbProcessor();
+    reverb->initialize(sample_rate);
+
+    clockedDelay = new ClockedDelay();
+    clockedDelay->initialize(sample_rate);
+
+    filter = new Svf();
+    filter->Init(sample_rate);
+
+    sidechain = new SidechainCompressor();
+    sidechain->initialize(sample_rate);
+
+    limiter = new Limiter();
+    limiter->Init();
+
+    // Configure, init and start listening on the ADC pins for each pot and CV
+    AdcChannelConfig adcConfig[6];
+    adcConfig[0].InitSingle(DaisySeed::GetPin(15));
+    adcConfig[1].InitSingle(DaisySeed::GetPin(16));
+    adcConfig[2].InitSingle(DaisySeed::GetPin(17));
+    adcConfig[3].InitSingle(DaisySeed::GetPin(18));
+    adcConfig[4].InitSingle(DaisySeed::GetPin(19));
+    adcConfig[5].InitSingle(DaisySeed::GetPin(20));
+    hw.adc.Init(adcConfig, 6);
+    hw.adc.Start();
+
+    hw.StartAudio(AudioCallback);
+
+    while (true) {
+        loop();
+    }
+}

@@ -1,5 +1,10 @@
 #include "ClockedDelay.h"
 
+#include <system.h>
+#include <dev/sdram.h>
+
+using namespace daisy;
+
 constexpr float CV_CHANGE_TOLERANCE = .01f;
 constexpr float DELAY_SAMPLE_RATE = 48000;
 constexpr size_t MAX_DELAY = static_cast<size_t>(DELAY_SAMPLE_RATE * 16.0f); // 16 Secs
@@ -46,7 +51,7 @@ void ClockedDelay::updateFeedback(float fbPot, float fbCV)
         fonepole(previousFbCVValue, fbCV, 0.001f); // Smoother transition
     }
 
-    delayFeedback = maxFeedback * constrain(previousFbCVValue + fbPot, 0.0f, 1.0f);
+    delayFeedback = maxFeedback * std::clamp(previousFbCVValue + fbPot, 0.0f, 1.0f);
 }
 
 void ClockedDelay::updateClockDivisor(float divisorPot)
